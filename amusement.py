@@ -3,9 +3,65 @@ import threading
 import time
 
 
+class AmusementException(Exception):
+    def __init__(self, message, errors):
+        super(AmusementException, self).__init__(message)
+        self.__errors = errors
+
+
+class RideIsFullException(AmusementException):
+    def __init__(self, message, errors):
+        super().__init__(message, errors)
+
 class Properties(object):
+    DEFAULT_PROPERTY_FILE_NAME = './cust.props'
+    DEFAULT_SOUNDS = {'child': ('oooh', 'wow', 'help'),
+                      'teen': ('boring', 'fuck yeah'),
+                      'adult': ('sweet Jesus',)}
+    __properties = dict()
+
     class LoadProps(object):
         pass
+
+    @staticmethod
+    def store_properties(property_file_name=DEFAULT_PROPERTY_FILE_NAME, default_sounds=DEFAULT_SOUNDS):
+        import configparser
+        config = configparser.ConfigParser()
+        config['SOUNDS'] = default_sounds
+        config['CHILD_SOUND'] = {'child': ('oooh', 'wow', 'help')}
+        config['TEEN_SOUND'] = {'teen': ('boring', 'fuck yeah')}
+        config['ADULT_SOUND'] = {'adult': ('sweet Jesus',)}
+        config['child'] = {}
+        child = config['child']
+        child['sounds'] = str(default_sounds['child'])
+        child['excited'] = 'oooh'
+        child['astonished'] = 'wow'
+        child['scared'] = 'help'
+        #       config['sounds.teen'] = default_sounds['teen']
+        #        config['sounds.adult'] = default_sounds['adult']
+
+
+        with open(property_file_name, 'w') as configfile:
+            try:
+                config.write(configfile)
+            finally:
+                configfile.flush()
+                configfile.close()
+
+    @staticmethod
+    def load_properties(property_file_name=DEFAULT_PROPERTY_FILE_NAME):
+        import pathlib, configparser
+        p = pathlib.Path(property_file_name)
+        if p.is_file():
+            config = configparser.ConfigParser()
+            with open(property_file_name, 'r') as f:
+                try:
+                    ret_val = config.read(f)
+                finally:
+                    f.close()
+        else:
+            ret_val = Properties.store_properties(property_file_name)
+        return ret_val
 
     @staticmethod
     def get_sound(length):
@@ -16,6 +72,20 @@ class Properties(object):
     @staticmethod
     def type_of_user(length):
         return 'child' if length < 130 else 'teen' if length < 160 else 'adult'
+
+        # @staticmethod
+        # def save_customer(customer):
+        #   with open('./customer.ser', 'wb') as f:
+        #         pickle._dump(customer, f)
+        #         f.flush()
+        #         f.close()
+
+        # @staticmethod
+        # def load_customer():
+        #     with open('./customer.ser', 'rb') as f:
+        #         customers = pickle.load(f)
+        #     f.close()
+        #     return customers
 
 
 class Customer(threading.Thread):
@@ -99,7 +169,8 @@ class Amusement(threading.Thread):
             a_passenger.shout_interval(1 / self.__x_factor)
             self.__passengers.append(a_passenger)
         else:
-            print('ride is full, <', a_passenger, '> has to wait.')
+            raise RideIsFullException('ride is full, <' + str(a_passenger) + '> has to wait.', 'full ride')
+            # print('ride is full, <', a_passenger, '> has to wait.')
 
     def free_seats(self):
         return self.__max_size - len(self.__passengers)
@@ -162,8 +233,7 @@ customers = list()
 customers.append(Customer('folke', 185, 55))
 customers.append(Customer('fritjof', 150, 14))
 customers.append(Customer('vidar', 125, 9))
-customers.append(Customer('vidar', 125, 9))
-customers.append(Customer('vidar', 125, 9))
+
 customers[0].shout_interval(3 / 4)
 customers[1].shout_interval(1 / 2)
 customers[2].shout_interval(1 / 3)
@@ -177,3 +247,7 @@ print(cc.get_passengers())
 list = cc.disembark_ride()
 for elem in list:
     print(elem)
+
+result = Properties.store_properties()
+
+print(result)
