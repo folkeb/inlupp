@@ -1,4 +1,9 @@
 # encoding:utf-8
+import ast
+import collections
+import configparser
+import pathlib
+import random
 import threading
 import time
 
@@ -18,27 +23,55 @@ class Properties(object):
     DEFAULT_SOUNDS = {'child': ('oooh', 'wow', 'help'),
                       'teen': ('boring', 'fuck yeah'),
                       'adult': ('sweet Jesus',)}
-    __properties = dict()
+
+    DEFAULT_ABSOLUTE_MAX_LENGTH = 260
+
+    Length = collections.namedtuple('Length', ('name', 'lower', 'upper'))
+    DEFAULT_MIN_LENGTH = Length(name='lower', lower=0, upper=80)
+    DEFAULT_MED_LENGTH = Length(name='medium', lower=81, upper=110)
+    DEFAULT_MAX_LENGTH = Length(name='high', lower=111, upper=DEFAULT_ABSOLUTE_MAX_LENGTH)
+
+    DEFAULT_HEIGHTS = {'short': DEFAULT_MIN_LENGTH,
+                       'medium': DEFAULT_MED_LENGTH,
+                       'max': DEFAULT_MAX_LENGTH}
+    DEFAULT_AGES = {'child': (0, 12), 'teen': (13, 19), 'adult': (20,)}
+
+    __properties = None
 
     class LoadProps(object):
         pass
 
     @staticmethod
+    def get_props():
+        if Properties.__properties is None:
+            Properties.__properties = Properties.store_properties()
+        else:
+            return Properties.__properties
+
+    @staticmethod
     def store_properties(property_file_name=DEFAULT_PROPERTY_FILE_NAME, default_sounds=DEFAULT_SOUNDS):
-        import configparser
         config = configparser.ConfigParser()
-        config['SOUNDS'] = default_sounds
-        config['CHILD_SOUND'] = {'child': ('oooh', 'wow', 'help')}
-        config['TEEN_SOUND'] = {'teen': ('boring', 'fuck yeah')}
-        config['ADULT_SOUND'] = {'adult': ('sweet Jesus',)}
+
         config['child'] = {}
         child = config['child']
         child['sounds'] = str(default_sounds['child'])
-        child['excited'] = 'oooh'
-        child['astonished'] = 'wow'
-        child['scared'] = 'help'
-        #       config['sounds.teen'] = default_sounds['teen']
-        #        config['sounds.adult'] = default_sounds['adult']
+        child['age'] = str(Properties.DEFAULT_AGES['child'])
+
+        config['teen'] = {}
+        teen = config['teen']
+        teen['sounds'] = str(default_sounds['teen'])
+        teen['age'] = str(Properties.DEFAULT_AGES['teen'])
+
+        config['adult'] = {}
+        adult = config['adult']
+        adult['sounds'] = str(default_sounds['adult'])
+        adult['age'] = str(Properties.DEFAULT_AGES['adult'])
+
+        config['height'] = {}
+        height = config['height']
+        height['min'] = str(Properties.DEFAULT_MIN_LENGTH)
+        height['med'] = str(Properties.DEFAULT_MED_LENGTH)
+        height['max'] = str(Properties.DEFAULT_MAX_LENGTH)
 
 
         with open(property_file_name, 'w') as configfile:
@@ -48,9 +81,10 @@ class Properties(object):
                 configfile.flush()
                 configfile.close()
 
+        return config
+
     @staticmethod
     def load_properties(property_file_name=DEFAULT_PROPERTY_FILE_NAME):
-        import pathlib, configparser
         p = pathlib.Path(property_file_name)
         if p.is_file():
             config = configparser.ConfigParser()
@@ -90,7 +124,6 @@ class Properties(object):
 
 class Customer(threading.Thread):
     def __init__(self, name, length, age):
-        # super(Customer, self)
         super(Customer, self).__init__()
         self.__name = name
         self.__length = length
@@ -137,7 +170,7 @@ class Customer(threading.Thread):
 
     def stop(self):
         self.__running = False
-        return self.a_restartable_me()
+        return self.a_restartable_me()  # spara undan denna innan run startar.
 
 
 class Amusement(threading.Thread):
@@ -215,7 +248,7 @@ class Amusement(threading.Thread):
 
 class Carousel(Amusement):
     def __init__(self, max_size=4, x_faxtor=5, run_time=5):
-        super(Carousel, self).__init__(max_size=4, x_faxtor=5, run_time=5)
+        super(Carousel, self).__init__(max_size, x_faxtor, run_time)
 
     def __str__(self):
         return super().__str__()
@@ -248,6 +281,25 @@ list = cc.disembark_ride()
 for elem in list:
     print(elem)
 
-result = Properties.store_properties()
+config = Properties.store_properties()
 
-print(result)
+print(config)
+
+dds = dict()
+
+for k, v in config.items('child'):
+    dds[k] = v
+
+print(dds)
+
+the_tuple = ast.literal_eval(config.get('child', 'sounds'))
+print(type(the_tuple), the_tuple)
+print(random.choice(the_tuple))
+
+the_tuple = ast.literal_eval(config.get('teen', 'sounds'))
+print(type(the_tuple), the_tuple)
+print(random.choice(the_tuple))
+
+child_age = ast.literal_eval(config.get('child', 'age'))
+print(child_age)
+print(child_age[0], child_age[1])
