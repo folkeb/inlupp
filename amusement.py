@@ -175,11 +175,16 @@ class Customer(threading.Thread):
 
 class Amusement(threading.Thread):
     __passengers = list()
+    __this = None
 
-    def __init__(self, max_size, x_faxtor, run_time):
+    class AmusementRunner(threading.Thread):
+        def __init__(self, Amusement, fear_factor, passenger_list):
+            super(threading.Thread, self).__init__()
+
+    def __init__(self, max_size, fear_factor, run_time):
         super(Amusement, self).__init__()
         self.__max_size = max_size
-        self.__x_factor = x_faxtor
+        self.__x_factor = fear_factor
         self.__run_time = run_time
         self.__is_full = len(self.__passengers) < self.__max_size
         self.__stop_running = False
